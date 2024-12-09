@@ -8,29 +8,52 @@ use DBI;
 # Configuración CGI y cabeceras
 my $cgi = CGI->new;
 
-# Configurar la cabecera para redirigir
-print $cgi->header(-type => 'text/html', -location => 'loginPet.pl');
-
 # Leer datos del formulario enviados por AJAX
 my $params = $cgi->Vars;
+
+print $cgi->header(-type => 'text/html', -location => 'loginPets.pl');
 
 # Conectar a la base de datos
 my $dbh = DBI->connect("DBI:mysql:database=pets;host=localhost", "perl_user", "perl_user", { RaiseError => 1, AutoCommit => 1 });
 
-# Preparar la consulta SQL para actualizar la información
-my $sth = $dbh->prepare(
-    "UPDATE pets SET owner = ?, species = ?, sex = ?, birth = ?, death = ? WHERE name = ?"
-);
+# Construir la consulta dinámicamente
+my @fields;
+my @values;
 
-# Ejecutar la consulta con los datos enviados
-my $success = $sth->execute(
-    $params->{owner},
-    $params->{species},
-    $params->{sex},
-    $params->{birth},
-    $params->{death} || undef,
-    $params->{name}
-);
+if ($params->{name}) {
+    push @fields, "name = ?";
+    push @values, $params->{name};
+}
+if ($params->{owner}) {
+    push @fields, "owner = ?";
+    push @values, $params->{owner};
+}
+if ($params->{species}) {
+    push @fields, "species = ?";
+    push @values, $params->{species};
+}
+if ($params->{sex}) {
+    push @fields, "sex = ?";
+    push @values, $params->{sex};
+}
+if ($params->{birth}) {
+    push @fields, "birth = ?";
+    push @values, $params->{birth};
+}
+if ($params->{death}) {
+    push @fields, "death = ?";
+    push @values, $params->{death};
+}
+
+# Añadir el ID a los valores
+push @values, $params->{id};
+
+# Preparar y ejecutar la consulta SQL
+my $sql = "UPDATE pets SET " . join(", ", @fields) . " WHERE id = ?";
+my $sth = $dbh->prepare($sql);
+my $success = $sth->execute(@values);
+
 
 # Cerrar conexión
 $dbh->disconnect;
+
