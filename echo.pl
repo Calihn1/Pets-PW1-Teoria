@@ -1,7 +1,9 @@
 #!/usr/bin/perl
+
 use strict;
 use warnings;
 use utf8;
+
 use open ':std', ':encoding(UTF-8)';
 binmode STDOUT, ':utf8';
 
@@ -57,31 +59,30 @@ Content-type: text/html
 </div>
 
 <script>
-  // AJAX to handle login
-  \$(document).ready(function() {
-    \$('#loginForm').on('submit', function(event) {
-      event.preventDefault();
-      const username = \$('#username').val();
-      const password = \$('#password').val();
+    $(document).ready(function() {
+      $('#loginForm').on('submit', function(event) {
+        event.preventDefault(); // Evitar el envío normal del formulario
 
-      \$.ajax({
-        url: '/cgi-bin/login.pl',
-        method: 'POST',
-        data: { username: username, password: password },
-        success: function(response) {
-          if (response === 'success') {
-            window.location.href = '/cgi-bin/loginPets.pl';
-          } else {
-            \$('#errorMsg').fadeIn();
+        $.ajax({
+          url: "login.pl", // Ruta del script Perl para procesar el login
+          method: "POST",
+          data: $(this).serialize(), // Enviar todos los datos del formulario como variables
+          success: function(response) {
+            // Manejar la respuesta
+            if (response.includes('success=')) {
+              window.location.href = "loginPets.pl"; // Redirigir a loginPets.pl
+            } else if (response.includes('error=')) {
+              $('#errorMsg').text(response.split('=')[1]).show(); // Mostrar error
+            }
+          },
+          error: function() {
+            alert('An error occurred. Please try again.');
           }
-        },
-        error: function() {
-          alert('An error occurred. Please try again later.');
-        }
+        });
       });
     });
-  });
 </script>
+
 </body>
 </html>
 EOF
