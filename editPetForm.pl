@@ -11,8 +11,12 @@ print "Content-type: text/html\n\n";
 print <<'EOF';
 <form id="editPetForm" action="editPet.pl" method="POST">
   <div class="form-group">
+  <label for="id">ID:</label>
+  <input type="text" class="form-control" id="id" name="id" placeholder="Required field to change id" required>
+  </div>
+  <div class="form-group">
   <label for="name">Name:</label>
-  <input type="text" class="form-control" id="name" name="name" placeholder="Required field to change name" required>
+  <input type="text" class="form-control" id="name" name="name" >
   </div>
   <div class="form-group">
     <label for="owner">Owner:</label>
