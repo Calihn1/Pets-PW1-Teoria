@@ -2,128 +2,50 @@
 
 use strict;
 use warnings;
-use utf8;
-use open ':std', ':encoding(UTF-8)';
-binmode STDOUT, ':utf8';
+use DBI;
+use JSON::XS;
+use open ':std', ':encoding(UTF-8)';  # Asegura que la salida es UTF-8
 
-print << 'EOF';
-Content-type: text/html
+print "Content-type: application/json; charset=UTF-8\n\n";
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <title>Registro de Mascotas</title>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
-</head>
-<body>
-<div class="container">
-  <h1 class="text-center">Welcome to the Pet Registry</h1>
-  <hr>
-  <div class="text-center">
-    <!-- Botones para cargar formularios dinámicamente -->
-    <button id="addPetBtn" class="btn btn-primary">Add Pet</button>
-    <button id="updatePetBtn" class="btn btn-warning">Edit Pet</button>
-    <button id="deletePetBtn" class="btn btn-danger">Delete Pet</button>
-  </div>
-  <hr>
-  
-  <!-- Sección dinámica donde se mostrarán los formularios cargados -->
-  <div id="dynamicSection"></div>
-  
-  <!-- Sección para mostrar las mascotas -->
-  <h3 class="text-center">Pet List</h3>
-  <div id="petsList" class="row"></div>
-</div>
+# Configuración de la conexión a MySQL
+my $dsn = "DBI:mysql:database=pets;host=localhost;port=3306";
+my $usuario = "perl_user";
+my $contrasena = "perl_user";  # Cambia estos valores según tu configuración
 
-<script>
-$(document).ready(function() {
-    /**
-     * Función que carga el formulario dinámicamente en el div con id "dynamicSection".
-     * @param {string} script - Ruta al script CGI que genera el formulario.
-     * @param {string} titulo - Título que se mostrará encima del formulario.
-     */
-    function cargarFormulario(script, titulo) {
-        var request = $.ajax({
-            url: script,
-            type: "GET",
-            dataType: "html"
-        });
+# Conectar a la base de datos
+my $dbh = DBI->connect(
+    $dsn,
+    $usuario,
+    $contrasena,
+    { RaiseError => 1, AutoCommit => 1, mysql_enable_utf8mb4 => 1 }
+) or die "No se puede conectar a la base de datos: $DBI::errstr";
 
-        request.done(function(response) {
-            $('#dynamicSection').html(
-                `<h3 class="text-center">` + titulo + `</h3>` + response
-            );
-        });
 
-        request.fail(function(jqXHR, textStatus) {
-            $('#dynamicSection').html(
-                `<div class="alert alert-danger">Error al cargar el formulario: ` + textStatus + `</div>`
-            );
-        });
-    }
+# Realizar la consulta
+my $sth = $dbh->prepare("SELECT * FROM pets");
+$sth->execute();
 
-   function cargarMascotas() {
-    var request = $.ajax({
-        url: "loadPets.pl",
-        type: "GET",
-        dataType: "json"
-    });
-
-    request.done(function(data) {
-        let html = '';
-        data.forEach((pet) => {
-            html += `
-                <div class="col-md-4">
-                    <div class="panel panel-default">
-                        <div class="panel-heading">
-                            <h4 class="panel-title">${pet.name}</h4>
-                        </div>
-                        <div class="panel-body">
-                            <p><strong>Owner:</strong> ${pet.owner}</p>
-                            <p><strong>Species:</strong> ${pet.species}</p>
-                            <p><strong>Sex:</strong> ${pet.sex}</p>
-                            <p><strong>Birth:</strong> ${pet.birth}</p>
-                            <p><strong>Death:</strong> ${pet.death || 'N/A'}</p>
-                        </div>
-                    </div>
-                </div>`;
-        });
-        $('#petsList').html(html);
-    });
-
-    request.fail(function(jqXHR, textStatus) {
-        $('#petsList').html(
-            `<div class="alert alert-danger">Error al cargar los datos: ` + textStatus + `</div>`
-        );
-    });
+# Almacenar los resultados en un array de hashes
+my @pets;
+while (my $row = $sth->fetchrow_hashref) {
+    push @pets, {
+        id      => $row->{id},
+        name    => $row->{name},
+        owner   => $row->{owner},
+        species => $row->{species},
+        sex     => $row->{sex},
+        birth   => $row->{birth},
+        death   => $row->{death} || 'N/A',  # Si 'death' es NULL, poner 'N/A'
+    };
 }
 
-    // Cargar la lista de mascotas al inicio
-    cargarMascotas();
+# Codificar en formato JSON
+my $json = JSON::XS->new->utf8(0)->encode(\@pets);
 
-    // Recargar la lista de mascotas después de una operación
-    $(document).on('formSuccess', function() {
-        cargarMascotas();
-    });
+# Imprimir los datos en JSON
+print $json;
 
-    // Manejar eventos de los botones para cargar el formulario correspondiente
-    $('#addPetBtn').on('click', function() {
-        cargarFormulario("addPetForm.pl", "Pet Add Form");
-    });
-
-    $('#updatePetBtn').on('click', function() {
-        cargarFormulario("editPetForm.pl", "Pet Modification Form");
-    });
-
-    $('#deletePetBtn').on('click', function() {
-        cargarFormulario("deletePetForm.pl", "Pet Removal Form");
-    });
-});
-</script>
-</body>
-</html>
-EOF
+# Liberar recursos
+$sth->finish();
+$dbh->disconnect();
