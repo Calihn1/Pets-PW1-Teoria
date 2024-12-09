@@ -1,44 +1,44 @@
 #!/usr/bin/perl
+
 use strict;
 use warnings;
-use DBI;
 use CGI;
+use DBI;
 
-# Configuración de CGI
+# Inicializar CGI
 my $cgi = CGI->new;
+
+# Enviar encabezado HTTP
 print $cgi->header('text/plain');
 
-# Obtener datos del formulario enviado vía POST
+# Capturar parámetros del formulario enviados por POST
 my $username = $cgi->param('username') // '';
 my $password = $cgi->param('password') // '';
 
 # Validar entrada
 if (!$username || !$password) {
-    print "error";
+    print "error=Missing username or password";
     exit;
 }
 
-# Configuración de la base de datos
-my $dbname = "registro";   # Nombre de la base de datos
-my $host = "localhost";    # Host donde está la base de datos
-my $port = "3306";         # Puerto de la base de datos
-my $user = "perl_user";         # Usuario de la base de datos
-my $pass = "perl_user";             # Contraseña de la base de datos
-
 # Conexión a la base de datos
-my $dsn = "DBI:mysql:database=$dbname;host=$host;port=$port";
-my $dbh = DBI->connect($dsn, $user, $pass, { RaiseError => 1, PrintError => 0 });
+my $dbname = "pets";
+my $host = "localhost";
+my $port = 3306;
+my $db_user = "perl_user";
+my $db_pass = "perl_user";
 
-# Consulta para verificar al usuario
+my $dsn = "DBI:mysql:database=$dbname;host=$host;port=$port";
+my $dbh = DBI->connect($dsn, $db_user, $db_pass, { RaiseError => 1, PrintError => 0 });
+
+# Consulta para verificar credenciales
 my $sth = $dbh->prepare("SELECT * FROM usuario WHERE username = ? AND password = ?");
 $sth->execute($username, $password);
 
 if (my $row = $sth->fetchrow_hashref) {
-    # Si las credenciales son correctas
-    print "success";
+    print "success=Login successful";
 } else {
-    # Credenciales incorrectas
-    print "error";
+    print "error=Invalid username or password";
 }
 
 # Finalizar conexión
